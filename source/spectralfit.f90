@@ -153,17 +153,20 @@ if (messages) print *, gettime(),"fitting full spectrum with ",totallines," line
 maskedspectrum=realspec
 maskedspectrum%flux=0
 do i=1,totallines
-  where (abs(fittedlines(i)%wavelength-maskedspectrum%wavelength/redshiftguess_overall)<6*fittedlines(i)%wavelength/resolutionguess)
+  where (abs(fittedlines(i)%wavelength-maskedspectrum%wavelength)<6)
     maskedspectrum=realspec
   endwhere
 enddo
+
+!todo: replace later use of realspec with maskedspectrum, but write out realspec at the end
+realspec%flux=maskedspectrum%flux
 
 !now go through spectrum in chunks of 440 units.  Each one overlaps by 20 units with the previous and succeeding chunk, to avoid the code attempting to fit part of a line profile
 !at beginning and end, padding is only to the right and left respectively
 
 do i=1,spectrumlength,400
 
-! overlap=nint(2*vtol2/(1-maskedspectrum(i)%wavelength/maskedspectrum(i+1)%wavelength)) ! this needs fixing, i+1 can be out of bounds
+! overlap=nint(2*vtol2/(1-realspec(i)%wavelength/realspec(i+1)%wavelength)) ! this needs fixing, i+1 can be out of bounds
   overlap=20
 
 ! avoid refitting final section. if spectrumlength%400<overlap, this would happen
@@ -172,22 +175,22 @@ do i=1,spectrumlength,400
 
   if (i .eq. 1) then
     startpos=1
-    startwlen=maskedspectrum(1)%wavelength/redshiftguess_overall
+    startwlen=realspec(1)%wavelength/redshiftguess_overall
   else
     startpos=i-overlap
-    startwlen=maskedspectrum(i)%wavelength/redshiftguess_overall
+    startwlen=realspec(i)%wavelength/redshiftguess_overall
   endif
 
   if (i+400+overlap-1 .gt. spectrumlength) then
     endpos=spectrumlength
-    endwlen=maskedspectrum(spectrumlength)%wavelength/redshiftguess_overall
+    endwlen=realspec(spectrumlength)%wavelength/redshiftguess_overall
   else
     endpos=i+400+overlap-1
-    endwlen=maskedspectrum(i+400)%wavelength/redshiftguess_overall
+    endwlen=realspec(i+400)%wavelength/redshiftguess_overall
   endif
 
   allocate(spectrumchunk(endpos-startpos+1))
-  spectrumchunk = maskedspectrum(startpos:endpos)
+  spectrumchunk = realspec(startpos:endpos)
 
   call selectlines(deeplines_catalogue, startwlen, endwlen, fittedlines_section, nlines)
 
@@ -259,7 +262,7 @@ enddo
 ! calculate the uncertainties
 
 if (messages) print *,gettime(),"estimating uncertainties"
-call get_uncertainties(fittedspectrum, maskedspectrum, fittedlines)
+call get_uncertainties(fittedspectrum, realspec, fittedlines)
 
 ! write out the fitted spectrum
 
@@ -269,7 +272,7 @@ write (100+tid,*) "#alfa version ",VERSION
 write (100+tid,*) "#fit generated using: ",trim(commandline)
 write (100+tid,*) "#""wavelength""  ""input spectrum ""  ""fitted spectrum""  ""cont-subbed orig"" ""continuum""  ""sky lines""  ""residuals""  ""uncertainty"""
 do i=1,spectrumlength
-  write(100+tid,"(F9.2, 7(ES12.3))") fittedspectrum(i)%wavelength,realspec(i)%flux + continuum(i)%flux, fittedspectrum(i)%flux + continuum(i)%flux + skyspectrum(i)%flux, realspec(i)%flux, continuum(i)%flux, skyspectrum(i)%flux, realspec(i)%flux - fittedspectrum(i)%flux, maskedspectrum(i)%uncertainty
+  write(100+tid,"(F9.2, 7(ES12.3))") fittedspectrum(i)%wavelength,realspec(i)%flux + continuum(i)%flux, fittedspectrum(i)%flux + continuum(i)%flux + skyspectrum(i)%flux, realspec(i)%flux, continuum(i)%flux, skyspectrum(i)%flux, realspec(i)%flux - fittedspectrum(i)%flux, realspec(i)%uncertainty
 enddo
 
 close(100+tid)
