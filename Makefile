@@ -37,7 +37,7 @@ VERSION := $(shell if [ -e debian/ ]; then dpkg-parsechangelog -S version; elif 
 
 FFLAGS+=-cpp -DPREFIX=\"$(PREFIX)\" -DVERSION=\"$(VERSION)\"
 LDFLAGS+=
-CFITSIOFLAGS=-lcfitsio -lm #-L/usr/lib/x86_64-linux-gnu/
+CFITSIOFLAGS= -lcfitsio -lm -L/usr/local/opt/cfitsio/lib/
 MANDIR=$(DESTDIR)$(PREFIX)/share/man/man1
 
 ifeq ($(FC),gfortran)
